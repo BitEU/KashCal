@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import org.onekash.kashcal.util.TimezoneUtils
 import java.io.IOException
 
 /**
@@ -440,6 +441,35 @@ class KashCalDataStore(
     }
 
     /**
+     * The user's home timezone as an IANA zone ID (e.g., "America/New_York").
+     * Empty string (default) means "not set — follow the device timezone".
+     * Setter validates the ID so an invalid zone can never be persisted;
+     * blank clears the preference back to "follow device".
+     */
+    val homeTimezone: Flow<String>
+        get() = getPreference(PreferencesKeys.HOME_TIMEZONE, "")
+
+    suspend fun setHomeTimezone(zoneId: String) {
+        if (zoneId.isNotBlank()) {
+            require(TimezoneUtils.isValidTimezone(zoneId)) {
+                "Invalid timezone ID: $zoneId"
+            }
+        }
+        setPreference(PreferencesKeys.HOME_TIMEZONE, zoneId)
+    }
+
+    /**
+     * Whether the Timeline view lays out its hour grid in the home timezone
+     * (default true — iOS-travel-mode style) instead of the device timezone.
+     */
+    val timelineUseHomeTz: Flow<Boolean>
+        get() = getPreference(PreferencesKeys.TIMELINE_USE_HOME_TZ, true)
+
+    suspend fun setTimelineUseHomeTz(useHomeTz: Boolean) {
+        setPreference(PreferencesKeys.TIMELINE_USE_HOME_TZ, useHomeTz)
+    }
+
+    /**
      * Time format preference.
      * - "system": Follow device's 24-hour setting
      * - "12h": Always 12-hour (2:30 PM)
@@ -460,10 +490,10 @@ class KashCalDataStore(
     // ========== Default Calendar View ==========
 
     /**
-     * Default calendar view preference.
-     * - "month": Month grid (default)
-     * - "agenda": 30-day upcoming events list
-     * - "three_days": 3-day scrollable time grid
+     * Default calendar view preference. Any VALID_VIEWS value — the persisted
+     * [ViewMode.key][org.onekash.kashcal.ui.viewmodels.ViewMode]: "month"
+     * (default), "agenda", "day", "timeline", "three_days", "week",
+     * "month_full", or "year".
      */
     val defaultCalendarView: Flow<String>
         get() = getPreference(PreferencesKeys.DEFAULT_CALENDAR_VIEW, VIEW_MONTH)
@@ -1041,12 +1071,13 @@ class KashCalDataStore(
         const val VIEW_MONTH = "month"
         const val VIEW_AGENDA = "agenda"
         const val VIEW_DAY = "day"
+        const val VIEW_TIMELINE = "timeline"
         const val VIEW_THREE_DAYS = "three_days"
         const val VIEW_MONTH_FULL = "month_full"
         const val VIEW_WEEK = "week"
         const val VIEW_YEAR = "year"
 
-        private val VALID_VIEWS = setOf(VIEW_MONTH, VIEW_AGENDA, VIEW_DAY, VIEW_THREE_DAYS, VIEW_WEEK, VIEW_MONTH_FULL, VIEW_YEAR)
+        private val VALID_VIEWS = setOf(VIEW_MONTH, VIEW_AGENDA, VIEW_DAY, VIEW_TIMELINE, VIEW_THREE_DAYS, VIEW_WEEK, VIEW_MONTH_FULL, VIEW_YEAR)
 
         // Time format values
         const val TIME_FORMAT_SYSTEM = "system"

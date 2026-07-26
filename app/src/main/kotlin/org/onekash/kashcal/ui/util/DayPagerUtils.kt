@@ -114,6 +114,15 @@ object DayPagerUtils {
     }
 
     /**
+     * Convert LocalDate to dayCode. Inverse of [dayCodeToLocalDate].
+     *
+     * @param date The date to convert
+     * @return DayCode in YYYYMMDD format
+     */
+    fun localDateToDayCode(date: LocalDate): Int =
+        date.year * 10000 + date.monthValue * 100 + date.dayOfMonth
+
+    /**
      * Convert dayCode to epoch millis at midnight.
      *
      * @param dayCode DayCode in YYYYMMDD format

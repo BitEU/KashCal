@@ -1039,20 +1039,14 @@ class EventCoordinator @Inject constructor(
                         // effective (post-default) reminders rather than the raw
                         // per-type default.
                         val exceptionReminders = exception.reminders ?: masterReminders
-                        // Keep originalInstanceTime — createImportedSeries needs it
-                        // to link the override. Its own timestamps/syncStatus are
-                        // stamped by the writer, so they're not set here.
-                        exception.copy(
-                            id = 0,
-                            calendarId = calendarId,
-                            uid = newUid,
-                            caldavUrl = null,
-                            etag = null,
-                            lastSyncError = null,
-                            syncRetryCount = 0,
-                            reminders = exceptionReminders,
-                            originalSyncId = null
-                        )
+                        // Same import hygiene as the master (fresh linkage, no
+                        // inherited ORGANIZER/rawIcal), but re-keep
+                        // originalInstanceTime — createImportedSeries needs it
+                        // to link the override. Its own timestamps/syncStatus
+                        // are stamped by the writer, so they're not set here.
+                        exception
+                            .asImported(calendarId, newUid, exceptionReminders)
+                            .copy(originalInstanceTime = exception.originalInstanceTime)
                     }
 
                     val series = eventWriter.createImportedSeries(
@@ -1393,7 +1387,21 @@ class EventCoordinator @Inject constructor(
         reminders = reminders,
         originalEventId = null,
         originalInstanceTime = null,
-        originalSyncId = null
+        originalSyncId = null,
+        // A file import is the user's own copy (fresh UID, no link to the
+        // source series), so it must not inherit the source's scheduling
+        // identity. Keeping a foreign ORGANIZER would trip the
+        // canEditAsOrganizer read-only gate — the user imports a flight or
+        // hotel .ics and then can't edit their own copy (they'd have to
+        // duplicate it first). Clearing rawIcal matters for the same reason:
+        // IcsPatcher regenerates pushes from it, which would resurrect the
+        // ORGANIZER/ATTENDEE lines on the next CalDAV sync.
+        organizerEmail = null,
+        organizerName = null,
+        organizerSentBy = null,
+        organizerScheduleStatus = null,
+        rawIcal = null,
+        alarmCount = reminders?.size ?: 0
     )
 
     companion object {

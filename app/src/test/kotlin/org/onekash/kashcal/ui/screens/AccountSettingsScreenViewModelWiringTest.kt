@@ -120,6 +120,8 @@ class AccountSettingsScreenViewModelWiringTest {
         every { vm.appLockEnabled } returns MutableStateFlow(false)
         every { vm.timeFormat } returns MutableStateFlow(KashCalDataStore.TIME_FORMAT_SYSTEM)
         every { vm.firstDayOfWeek } returns MutableStateFlow(java.util.Calendar.SUNDAY)
+        every { vm.homeTimezone } returns MutableStateFlow("")
+        every { vm.timelineUseHomeTz } returns MutableStateFlow(true)
         every { vm.showWeekNumbers } returns MutableStateFlow(weekNumbers)
         every { vm.widgetMaxEventsPerDay } returns MutableStateFlow(widget)
         every { vm.syncLookbackDays } returns MutableStateFlow(KashCalDataStore.DEFAULT_SYNC_PAST_DAYS)

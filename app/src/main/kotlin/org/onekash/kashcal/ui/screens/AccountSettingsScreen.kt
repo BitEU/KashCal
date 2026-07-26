@@ -16,12 +16,14 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.FlightTakeoff
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Schedule
@@ -57,6 +59,7 @@ import org.onekash.kashcal.ui.components.AppInfoSheet
 import org.onekash.kashcal.ui.components.CalDavSignInSheet
 import org.onekash.kashcal.ui.components.ICloudSignInSheet
 import org.onekash.kashcal.ui.components.SettingsTopAppBar
+import org.onekash.kashcal.ui.components.pickers.TimezonePickerSheet
 import org.onekash.kashcal.ui.model.CalendarGroup
 import org.onekash.kashcal.ui.model.localizedDisplayName
 import org.onekash.kashcal.ui.screens.settings.AccountDetailDiscoverStatus
@@ -88,6 +91,7 @@ import org.onekash.kashcal.ui.shared.getAllDayReminderOptions
 import org.onekash.kashcal.ui.shared.getTimedReminderOptions
 import org.onekash.kashcal.ui.shared.formatSyncLookback
 import org.onekash.kashcal.util.DateTimeUtils
+import org.onekash.kashcal.util.TimezoneUtils
 
 /**
  * UI state for the account settings screen.
@@ -249,6 +253,10 @@ fun AccountSettingsScreen(
     onTimeFormatChange: (String) -> Unit = {},
     firstDayOfWeek: Int = java.util.Calendar.SUNDAY,
     onFirstDayOfWeekChange: (Int) -> Unit = {},
+    homeTimezone: String = "",
+    onHomeTimezoneChange: (String) -> Unit = {},
+    timelineUseHomeTz: Boolean = true,
+    onTimelineUseHomeTzChange: (Boolean) -> Unit = {},
     showWeekNumbers: Boolean = false,
     onShowWeekNumbersChange: (Boolean) -> Unit = {},
     widgetMaxEventsPerDay: Int = 5,
@@ -314,6 +322,7 @@ fun AccountSettingsScreen(
                 var showAllDayAlertSheet by remember { mutableStateOf(false) }
                 var showTimeFormatSheet by remember { mutableStateOf(false) }
                 var showFirstDayOfWeekSheet by remember { mutableStateOf(false) }
+                var showHomeTimezoneSheet by remember { mutableStateOf(false) }
                 var showEventDurationSheet by remember { mutableStateOf(false) }
                 var showWidgetEventLimitSheet by remember { mutableStateOf(false) }
                 var showDebugMenu by remember { mutableStateOf(false) }
@@ -455,7 +464,9 @@ fun AccountSettingsScreen(
                         tracker = emittedTracker,
                     ) {
                         // Tap-to-open picker rows first, then the inline toggles (a group's
-                        // switches read cleanest clustered at the end).
+                        // switches read cleanest clustered at the end). Exception: the
+                        // "Timeline in home time" toggle sits directly under the Home
+                        // time zone picker it modifies — the pairing beats the ordering.
                         val timeFormatSubtitle = when (timeFormat) {
                             KashCalDataStore.TIME_FORMAT_12H -> stringResource(R.string.option_12_hour)
                             KashCalDataStore.TIME_FORMAT_24H -> stringResource(R.string.option_24_hour)
@@ -486,6 +497,42 @@ fun AccountSettingsScreen(
                                 value = firstDaySubtitle,
                                 onClick = { showFirstDayOfWeekSheet = true },
                                 showChevron = false,
+                                showDivider = false,
+                                searchQuery = searchQuery
+                            )
+                        }
+
+                        // Home time zone + Timeline layout preference. The picker value
+                        // shows the zone's city name so "America/New_York" reads as
+                        // "New York"; unset falls back to "Device time zone".
+                        val homeTimezoneSubtitle = if (homeTimezone.isBlank()) {
+                            stringResource(R.string.settings_home_timezone_device)
+                        } else {
+                            TimezoneUtils.getTimezoneInfo(homeTimezone)?.displayName ?: homeTimezone
+                        }
+                        row(label = stringResource(R.string.settings_home_timezone), subtitle = homeTimezoneSubtitle, id = "home-timezone") {
+                            SettingsRow(
+                                icon = Icons.Default.Public,
+                                label = stringResource(R.string.settings_home_timezone),
+                                value = homeTimezoneSubtitle,
+                                onClick = { showHomeTimezoneSheet = true },
+                                showChevron = false,
+                                showDivider = false,
+                                searchQuery = searchQuery
+                            )
+                        }
+
+                        val timelineHomeTzInfo = SettingsRowInfo(
+                            title = stringResource(R.string.settings_timeline_home_tz),
+                            text = stringResource(R.string.settings_timeline_home_tz_info)
+                        )
+                        row(label = stringResource(R.string.settings_timeline_home_tz), id = "timeline-home-tz") {
+                            SettingsToggleRow(
+                                icon = Icons.Default.FlightTakeoff,
+                                label = stringResource(R.string.settings_timeline_home_tz),
+                                checked = timelineUseHomeTz,
+                                onCheckedChange = onTimelineUseHomeTzChange,
+                                info = timelineHomeTzInfo,
                                 showDivider = false,
                                 searchQuery = searchQuery
                             )
@@ -851,6 +898,19 @@ fun AccountSettingsScreen(
                         currentValue = firstDayOfWeek,
                         onSelect = onFirstDayOfWeekChange,
                         onDismiss = { showFirstDayOfWeekSheet = false }
+                    )
+                }
+
+                // Home Time Zone picker (Timeline view). Selecting null maps to
+                // "" = follow the device timezone.
+                if (showHomeTimezoneSheet) {
+                    TimezonePickerSheet(
+                        selectedTimezone = homeTimezone.ifBlank { null },
+                        onTimezoneSelected = { zoneId ->
+                            onHomeTimezoneChange(zoneId.orEmpty())
+                            showHomeTimezoneSheet = false
+                        },
+                        onDismiss = { showHomeTimezoneSheet = false }
                     )
                 }
 

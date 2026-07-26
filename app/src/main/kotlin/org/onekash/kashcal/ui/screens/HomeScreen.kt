@@ -168,6 +168,8 @@ import org.onekash.kashcal.ui.components.eventStateDescription
 import org.onekash.kashcal.ui.components.formatDisplayEventTitle
 import org.onekash.kashcal.ui.components.formatEventTitle
 import org.onekash.kashcal.ui.components.pickers.InlineDatePickerContent
+import org.onekash.kashcal.ui.components.timeline.TimelineDayContent
+import org.onekash.kashcal.ui.components.timeline.TimelineUtils
 import org.onekash.kashcal.ui.components.weekview.WeekViewContent
 import org.onekash.kashcal.ui.model.MonthGrid
 import org.onekash.kashcal.ui.screens.insights.InsightsScreen
@@ -733,6 +735,46 @@ fun HomeScreen(
                                                 }
                                             )
                                         }
+                                    }
+                                    ViewMode.DAY_TIMELINE -> {
+                                        val timelineGridZone = remember(uiState.timelineUseHomeTz, uiState.homeTimezone) {
+                                            TimelineUtils.resolveGridZone(uiState.timelineUseHomeTz, uiState.homeTimezone)
+                                        }
+                                        TimelineDayContent(
+                                            timedEvents = weekEvents.timedEvents,
+                                            allDayEvents = weekEvents.allDayEvents,
+                                            error = weekEvents.error,
+                                            gridZone = timelineGridZone,
+                                            scrollPosition = uiState.weekViewScrollPosition,
+                                            savedScrollMinutes = uiState.weekViewSavedScrollMinutes,
+                                            hourHeight = uiState.weekViewHourHeight,
+                                            onHourHeightChange = onWeekHourHeightChange,
+                                            showEventEmojis = uiState.showEventEmojis,
+                                            timePattern = timePattern,
+                                            firstDayOfWeek = uiState.firstDayOfWeek,
+                                            onEventClick = { displayEvent ->
+                                                when (displayEvent) {
+                                                    is DisplayEvent.Room -> onEventClick(displayEvent.event, displayEvent.occurrence.startTs)
+                                                    is DisplayEvent.Device -> onDeviceEventClick(displayEvent)
+                                                }
+                                            },
+                                            onEmptyTap = { date, hour, minute ->
+                                                // Tapping 4 PM on a home-time grid creates a
+                                                // 4 PM *home-time* event — the grid zone owns
+                                                // the wall clock, not the device zone.
+                                                val startMs = date.atTime(hour, minute)
+                                                    .atZone(timelineGridZone)
+                                                    .toInstant()
+                                                    .toEpochMilli()
+                                                onCreateEventWithDateTime(startMs)
+                                            },
+                                            onScrollPositionChange = onWeekScrollPositionChange,
+                                            onScrollMinutesChange = onWeekScrollMinutesChange,
+                                            onPageChanged = onDayPagerPageChanged,
+                                            pendingNavigateToPage = uiState.pendingWeekViewPagerPosition,
+                                            onNavigationConsumed = onClearPendingWeekPagerPosition,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
                                     }
                                     ViewMode.DAY, ViewMode.THREE_DAYS, ViewMode.WEEK -> {
                                         WeekViewContent(
@@ -1316,6 +1358,9 @@ private fun HomeTopAppBar(
             // use their own viewing month. The formatter reads viewingYear/viewingMonth,
             // so substitute the scroll-derived month only for AGENDA.
             val isAgenda = uiState.viewMode == ViewMode.AGENDA
+            val timelineGridZone = remember(uiState.timelineUseHomeTz, uiState.homeTimezone) {
+                TimelineUtils.resolveGridZone(uiState.timelineUseHomeTz, uiState.homeTimezone)
+            }
             val titleText = TopBarTitleFormatter.format(
                 viewMode = uiState.viewMode,
                 viewingYear = if (isAgenda) agendaTitleMonth.first else uiState.viewingYear,
@@ -1326,6 +1371,7 @@ private fun HomeTopAppBar(
                 weekSuffixTemplate = weekSuffixTemplate,
                 yearLabel = yearLabel,
                 today = today,
+                timelineGridZone = timelineGridZone,
             )
             val isAgendaView = uiState.viewMode == ViewMode.AGENDA
             val titleFontSize = if (uiState.viewMode == ViewMode.WEEK) 18.sp else 20.sp

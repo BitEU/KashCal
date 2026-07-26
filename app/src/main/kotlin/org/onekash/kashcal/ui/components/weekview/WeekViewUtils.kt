@@ -2,7 +2,9 @@ package org.onekash.kashcal.ui.components.weekview
 
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import org.onekash.kashcal.data.db.entity.Occurrence
 import org.onekash.kashcal.domain.model.DisplayEvent
+import org.onekash.kashcal.ui.util.DayPagerUtils
 import org.onekash.kashcal.ui.components.weekview.WeekViewUtils.MAX_HOUR_HEIGHT_DP
 import org.onekash.kashcal.ui.components.weekview.WeekViewUtils.MIN_HOUR_HEIGHT_DP
 import org.onekash.kashcal.ui.components.weekview.WeekViewUtils.START_HOUR
@@ -68,10 +70,12 @@ object WeekViewUtils {
      * CENTER_DAY_PAGE corresponds to today.
      *
      * @param page The pager page index
+     * @param today Anchor date for CENTER_DAY_PAGE (injectable for tests and
+     *   for the Timeline view, which anchors to today in its grid timezone —
+     *   same convention as [weekPageToStartDate]'s referenceDate)
      * @return LocalDate for that page
      */
-    fun pageToDate(page: Int): LocalDate {
-        val today = LocalDate.now()
+    fun pageToDate(page: Int, today: LocalDate = LocalDate.now()): LocalDate {
         val dayOffset = page.toLong() - CENTER_DAY_PAGE.toLong()
         return today.plusDays(dayOffset)
     }
@@ -81,10 +85,10 @@ object WeekViewUtils {
      * Today corresponds to CENTER_DAY_PAGE.
      *
      * @param date The date to convert
+     * @param today Anchor date for CENTER_DAY_PAGE (see [pageToDate])
      * @return Page index for that date
      */
-    fun dateToPage(date: LocalDate): Int {
-        val today = LocalDate.now()
+    fun dateToPage(date: LocalDate, today: LocalDate = LocalDate.now()): Int {
         val dayOffset = ChronoUnit.DAYS.between(today, date)
         return (CENTER_DAY_PAGE.toLong() + dayOffset).toInt()
     }
@@ -597,7 +601,10 @@ object WeekViewUtils {
         val minHeightMinutes = (MIN_EVENT_HEIGHT.value / hourHeight.value * MINUTES_PER_HOUR)
             .toInt().coerceIn(1, defaultMinHeightMinutes)
 
-        // Step 2: Convert to time spans (clamp cross-midnight events to day boundaries)
+        // Step 2: Convert to time spans (clamp cross-midnight events to day boundaries).
+        // The clamp + min-height-window + midnight-sliver rules here have a sibling in
+        // TimelineLayout.buildClampedSpans (which needs them zone-parameterized for the
+        // Timeline's home-timezone grid) — keep fixes in sync.
         val timeSpans = sorted.map { displayEvent ->
             val start = Instant.ofEpochMilli(displayEvent.startTs).atZone(ZoneId.systemDefault())
             val end = Instant.ofEpochMilli(displayEvent.endTs).atZone(ZoneId.systemDefault())
@@ -778,6 +785,25 @@ object WeekViewUtils {
             .toLocalTime()
 
         return "${startTime.format(formatter).lowercase()} - ${endTime.format(formatter).lowercase()}"
+    }
+
+    /**
+     * Group events by the calendar dates they span, using the pre-computed
+     * startDay/endDay day codes (UTC-aware for all-day events). Multi-day
+     * events appear on every day they span. Shared by the week view's
+     * timed/all-day grouping and the Timeline's all-day row.
+     */
+    fun groupEventsByDate(events: List<DisplayEvent>): Map<LocalDate, List<DisplayEvent>> {
+        val result = mutableMapOf<LocalDate, MutableList<DisplayEvent>>()
+        for (displayEvent in events) {
+            var currentDay = displayEvent.startDay
+            while (currentDay <= displayEvent.endDay) {
+                val date = DayPagerUtils.dayCodeToLocalDate(currentDay)
+                result.getOrPut(date) { mutableListOf() }.add(displayEvent)
+                currentDay = Occurrence.incrementDayCode(currentDay)
+            }
+        }
+        return result
     }
 
     /**

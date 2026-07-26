@@ -346,6 +346,14 @@ class AccountSettingsViewModel @Inject constructor(
     private val _firstDayOfWeek = MutableStateFlow(java.util.Calendar.SUNDAY)
     val firstDayOfWeek: StateFlow<Int> = _firstDayOfWeek.asStateFlow()
 
+    /** Home timezone IANA ID for the Timeline view; "" = follow device */
+    private val _homeTimezone = MutableStateFlow("")
+    val homeTimezone: StateFlow<String> = _homeTimezone.asStateFlow()
+
+    /** Whether the Timeline view lays out its grid in the home timezone */
+    private val _timelineUseHomeTz = MutableStateFlow(true)
+    val timelineUseHomeTz: StateFlow<Boolean> = _timelineUseHomeTz.asStateFlow()
+
     private val _showWeekNumbers = MutableStateFlow(false)
     val showWeekNumbers: StateFlow<Boolean> = _showWeekNumbers.asStateFlow()
 
@@ -689,6 +697,16 @@ class AccountSettingsViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
+            dataStore.homeTimezone.collect { zoneId ->
+                _homeTimezone.value = zoneId
+            }
+        }
+        viewModelScope.launch {
+            dataStore.timelineUseHomeTz.collect { useHomeTz ->
+                _timelineUseHomeTz.value = useHomeTz
+            }
+        }
+        viewModelScope.launch {
             dataStore.showWeekNumbers.collect { show ->
                 _showWeekNumbers.value = show
             }
@@ -779,6 +797,28 @@ class AccountSettingsViewModel @Inject constructor(
         viewModelScope.launch {
             dataStore.setTimeFormat(format)
             widgetUpdateManager.updateAllWidgets("time_format_changed")
+        }
+    }
+
+    /**
+     * Update the home timezone (Timeline view). Empty string = follow device.
+     * Only picker-validated IANA IDs reach here; the DataStore setter re-checks
+     * and this catch keeps a hypothetical bad value from crashing the app.
+     */
+    fun setHomeTimezone(zoneId: String) {
+        viewModelScope.launch {
+            try {
+                dataStore.setHomeTimezone(zoneId)
+            } catch (e: IllegalArgumentException) {
+                Log.e(TAG, "Rejected home timezone: $zoneId", e)
+            }
+        }
+    }
+
+    /** Update whether the Timeline view lays out its grid in home time. */
+    fun setTimelineUseHomeTz(useHomeTz: Boolean) {
+        viewModelScope.launch {
+            dataStore.setTimelineUseHomeTz(useHomeTz)
         }
     }
 

@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.ViewAgenda
+import androidx.compose.material.icons.filled.ViewTimeline
 import androidx.compose.material.icons.filled.ViewWeek
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -40,6 +41,7 @@ internal data class ViewOption(
 internal val viewOptions = listOf(
     ViewOption(ViewMode.AGENDA, Icons.Default.ViewAgenda),
     ViewOption(ViewMode.DAY, Icons.Default.CalendarToday),
+    ViewOption(ViewMode.DAY_TIMELINE, Icons.Default.ViewTimeline),
     ViewOption(ViewMode.THREE_DAYS, Icons.Default.ViewWeek),
     ViewOption(ViewMode.WEEK, Icons.Default.DateRange),
     ViewOption(ViewMode.MONTH, Icons.Default.CalendarMonth),
@@ -54,6 +56,7 @@ internal fun iconForMode(mode: ViewMode): ImageVector =
 internal fun viewModeLabel(mode: ViewMode): String = when (mode) {
     ViewMode.AGENDA -> stringResource(R.string.view_agenda)
     ViewMode.DAY -> stringResource(R.string.view_day)
+    ViewMode.DAY_TIMELINE -> stringResource(R.string.view_timeline)
     ViewMode.THREE_DAYS -> stringResource(R.string.view_three_days)
     ViewMode.WEEK -> stringResource(R.string.view_week)
     ViewMode.MONTH -> stringResource(R.string.view_month)

@@ -5,6 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.onekash.kashcal.ui.components.timeline.TimelineUtils
 import org.onekash.kashcal.ui.components.weekview.WeekViewUtils
 import org.onekash.kashcal.ui.viewmodels.ViewMode
 import org.robolectric.RobolectricTestRunner
@@ -171,6 +172,48 @@ class TopBarTitleFormatterTest {
             locale = Locale.US,
         )
         assertTrue("Should match 'Mmm yyyy', got: $result", result.matches(Regex("\\w+ \\d{4}")))
+    }
+
+    @Test
+    fun `format DAY_TIMELINE returns month-year like THREE_DAYS`() {
+        val centerPage = WeekViewUtils.CENTER_DAY_PAGE
+        val result = TopBarTitleFormatter.format(
+            viewMode = ViewMode.DAY_TIMELINE,
+            viewingYear = 2026,
+            viewingMonth = 0,
+            weekViewPagerPosition = centerPage,
+            firstDayOfWeek = Calendar.SUNDAY,
+            weekPrefix = "W",
+            weekSuffixTemplate = weekSuffixTemplate,
+            yearLabel = yearLabel,
+            locale = Locale.US,
+        )
+        assertTrue("Should match 'Mmm yyyy', got: $result", result.matches(Regex("\\w+ \\d{4}")))
+    }
+
+    @Test
+    fun `format DAY_TIMELINE derives the date from the grid zone`() {
+        // A maximally-ahead grid zone's "today" (and thus the title's month)
+        // can differ from the device zone's; the title must follow the grid
+        // zone. Note the guard only bites when the two zones' dates straddle
+        // a month boundary — on other days both derivations agree.
+        val gridZone = java.time.ZoneId.of("Pacific/Kiritimati") // UTC+14, maximally ahead
+        val expected = WeekViewUtils.formatMonthYear(
+            TimelineUtils.pageToDate(WeekViewUtils.CENTER_DAY_PAGE, gridZone)
+        )
+        val result = TopBarTitleFormatter.format(
+            viewMode = ViewMode.DAY_TIMELINE,
+            viewingYear = 2026,
+            viewingMonth = 0,
+            weekViewPagerPosition = WeekViewUtils.CENTER_DAY_PAGE,
+            firstDayOfWeek = Calendar.SUNDAY,
+            weekPrefix = "W",
+            weekSuffixTemplate = weekSuffixTemplate,
+            yearLabel = yearLabel,
+            locale = Locale.US,
+            timelineGridZone = gridZone,
+        )
+        assertEquals(expected, result)
     }
 
     @Test

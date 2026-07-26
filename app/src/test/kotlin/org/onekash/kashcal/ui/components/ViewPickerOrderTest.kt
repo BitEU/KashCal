@@ -30,10 +30,11 @@ class ViewPickerOrderTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
-    /** Ascending by span: one day through a full year. */
+    /** Ascending by span: one day through a full year (Timeline is a 1-day view, after Day). */
     private val expectedOrder = listOf(
         ViewMode.AGENDA,
         ViewMode.DAY,
+        ViewMode.DAY_TIMELINE,
         ViewMode.THREE_DAYS,
         ViewMode.WEEK,
         ViewMode.MONTH,
@@ -80,7 +81,7 @@ class ViewPickerOrderTest {
 
         composeTestRule.onNodeWithContentDescription("Calendar view").performClick()
 
-        val labels = listOf("Agenda", "Day", "3 Days", "Week", "Month", "Month (Full)", "Year")
+        val labels = listOf("Agenda", "Day", "Timeline", "3 Days", "Week", "Month", "Month (Full)", "Year")
         val tops = labels.map { label ->
             composeTestRule.onNodeWithText(label, useUnmergedTree = true)
                 .assertIsDisplayed()

@@ -12,6 +12,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -1140,6 +1141,55 @@ class EventCoordinatorTest {
     }
 
     @Test
+    fun `importIcsEvents strips foreign organizer and rawIcal so the copy is editable`() = runTest {
+        // A travel-booking .ics (TripIt, airline, hotel, iOS export) carries an
+        // ORGANIZER that isn't the user. The imported copy must shed it —
+        // otherwise canEditAsOrganizer locks the user's own import read-only
+        // (they'd have to duplicate-then-edit). rawIcal must go too, or
+        // IcsPatcher resurrects the ORGANIZER/ATTENDEE lines on the next push.
+        val bookedEvent = testEvent.copy(
+            id = 0L,
+            uid = "booking-123@tripit.com",
+            title = "Flight: AA 2440 from JFK to LAS",
+            reminders = listOf("-PT15M"),
+            organizerEmail = "noreply@tripit.com",
+            organizerName = "TripIt",
+            organizerSentBy = "mailto:assistant@tripit.com",
+            organizerScheduleStatus = "1.2;Delivered",
+            rawIcal = "BEGIN:VEVENT\nORGANIZER:mailto:noreply@tripit.com\nEND:VEVENT"
+        )
+        val createdEvent = bookedEvent.copy(id = 305L, organizerEmail = null, rawIcal = null)
+        val testOccurrence = Occurrence(
+            eventId = createdEvent.id,
+            calendarId = localCalendarId,
+            startTs = createdEvent.startTs,
+            endTs = createdEvent.endTs,
+            startDay = 20240101,
+            endDay = 20240101
+        )
+
+        coEvery { eventWriter.createEvent(any(), any()) } returns createdEvent
+        coEvery { eventReader.getOccurrencesForEventInScheduleWindow(createdEvent.id) } returns listOf(testOccurrence)
+
+        val count = coordinator.importIcsEvents(listOf(bookedEvent), localCalendarId)
+
+        assertEquals(1, count)
+        coVerify {
+            eventWriter.createEvent(
+                match {
+                    it.organizerEmail == null &&
+                        it.organizerName == null &&
+                        it.organizerSentBy == null &&
+                        it.organizerScheduleStatus == null &&
+                        it.rawIcal == null &&
+                        it.uid != bookedEvent.uid
+                },
+                any()
+            )
+        }
+    }
+
+    @Test
     fun `importIcsEvents applies user's default all-day reminder when ICS has no VALARM`() = runTest {
         // setup() stubs user's all-day default at 540 minutes (9 hours before).
         val allDayEventNoReminders = testEvent.copy(
@@ -1240,11 +1290,16 @@ class EventCoordinatorTest {
         val sharedUid = "series@source.ics"
         val master = testEvent.copy(
             id = 0L, uid = sharedUid, title = "Weekly", rrule = "FREQ=WEEKLY;COUNT=5",
-            reminders = null, originalInstanceTime = null
+            reminders = null, originalInstanceTime = null,
+            // Foreign scheduling identity: the series path must apply the same
+            // import hygiene as the standalone path (stripped organizer/rawIcal).
+            organizerEmail = "noreply@tripit.com",
+            rawIcal = "BEGIN:VEVENT\nORGANIZER:mailto:noreply@tripit.com\nEND:VEVENT"
         )
         val exception1 = testEvent.copy(
             id = 0L, uid = sharedUid, title = "Moved wk2",
-            rrule = null, originalInstanceTime = master.startTs + 7 * 86400000L, reminders = null
+            rrule = null, originalInstanceTime = master.startTs + 7 * 86400000L, reminders = null,
+            organizerEmail = "noreply@tripit.com"
         )
         val exception2 = testEvent.copy(
             id = 0L, uid = sharedUid, title = "Moved wk3",
@@ -1277,6 +1332,12 @@ class EventCoordinatorTest {
             setOf(master.startTs + 7 * 86400000L, master.startTs + 14 * 86400000L),
             exceptionsSlot.captured.mapNotNull { it.originalInstanceTime }.toSet()
         )
+        // Import hygiene applies to the whole series: the foreign ORGANIZER and
+        // rawIcal are stripped from master and exceptions alike, so the copy
+        // stays editable (same rule the standalone-import test pins).
+        assertNull(seriesSlot.captured.organizerEmail)
+        assertNull(seriesSlot.captured.rawIcal)
+        assertTrue(exceptionsSlot.captured.all { it.organizerEmail == null && it.rawIcal == null })
     }
 
     @Test

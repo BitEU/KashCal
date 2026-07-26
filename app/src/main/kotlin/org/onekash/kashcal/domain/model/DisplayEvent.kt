@@ -61,6 +61,29 @@ sealed interface DisplayEvent {
     val isDeclinedByMe: Boolean
 
     /**
+     * IANA timezone ID the event's start time was authored in (e.g., a flight
+     * departing New York carries "America/New_York"), or null when unknown.
+     * Display-layer only: [startTs]/[endTs] are absolute instants regardless.
+     * The Timeline view compares this against its grid timezone to decide when
+     * an event needs a dual-timezone annotation. Caveat for Device all-day
+     * events: CalendarProvider stores their starts at UTC midnight while the
+     * row's EVENT_TIMEZONE may carry an unrelated IANA id (see
+     * [toEventForShareCard]) — consumers must not read this field for all-day
+     * timing.
+     */
+    val timezone: String?
+
+    /**
+     * IANA timezone ID for the event's end time when it differs from [timezone]
+     * (e.g., a flight landing in Las Vegas ends in "America/Los_Angeles").
+     * Null means the end shares the start's timezone (the common case).
+     * Only Room events carry a distinct end zone (issue #39); the
+     * device-calendar plumbing doesn't read EVENT_END_TIMEZONE, so Device
+     * always reports null.
+     */
+    val endTimezone: String?
+
+    /**
      * True when the whole event has been cancelled (RFC 5545 STATUS:CANCELLED),
      * e.g. an organizer called off a meeting or the event was cancelled from
      * another client. Unlike [isDeclinedByMe] this is not per-attendee and does
@@ -95,6 +118,8 @@ sealed interface DisplayEvent {
         override val isReadOnly get() = calendar?.isReadOnly ?: false
         override val isFree get() = event.transp == "TRANSPARENT"
         override val isCancelled get() = event.status == "CANCELLED"
+        override val timezone get() = event.timezone
+        override val endTimezone get() = event.endTimezone
     }
 
     /** Device calendar event from CalendarProvider */
@@ -117,6 +142,8 @@ sealed interface DisplayEvent {
         override val isFree get() = instance.availability == 1
         override val isDeclinedByMe get() = instance.selfAttendeeStatus == Attendees.ATTENDEE_STATUS_DECLINED
         override val isCancelled get() = instance.status == Events.STATUS_CANCELED
+        override val timezone get() = instance.timezone
+        override val endTimezone: String? get() = null
 
         /** RFC 5545 RRULE string, null for non-recurring events. */
         val rrule: String? get() = instance.rrule

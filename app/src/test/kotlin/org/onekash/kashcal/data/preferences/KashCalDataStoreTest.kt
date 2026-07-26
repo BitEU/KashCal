@@ -490,4 +490,51 @@ class KashCalDataStoreTest {
             assertEquals(mode.key, dataStore.getDefaultCalendarView())
         }
     }
+
+    // ==================== Home Timezone (Timeline view) ====================
+
+    @Test
+    fun `homeTimezone defaults to empty (follow device)`() = runTest {
+        dataStore.homeTimezone.test {
+            assertEquals("", awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `setHomeTimezone round-trips a valid IANA id and blank clears it`() = runTest {
+        dataStore.homeTimezone.test {
+            assertEquals("", awaitItem())
+
+            dataStore.setHomeTimezone("America/New_York")
+            assertEquals("America/New_York", awaitItem())
+
+            dataStore.setHomeTimezone("")
+            assertEquals("", awaitItem())
+
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `setHomeTimezone rejects an invalid zone id`() = runTest {
+        try {
+            dataStore.setHomeTimezone("Not/AZone")
+            throw AssertionError("Expected IllegalArgumentException")
+        } catch (e: IllegalArgumentException) {
+            // Expected
+        }
+    }
+
+    @Test
+    fun `timelineUseHomeTz defaults to true and round-trips`() = runTest {
+        dataStore.timelineUseHomeTz.test {
+            assertEquals(true, awaitItem())
+
+            dataStore.setTimelineUseHomeTz(false)
+            assertEquals(false, awaitItem())
+
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
 }

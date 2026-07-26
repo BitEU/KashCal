@@ -62,13 +62,38 @@ class ViewModeTest {
     }
 
     @Test
-    fun `ViewMode has 8 entries`() {
-        assertEquals(8, ViewMode.entries.size)
+    fun `ViewMode has 9 entries`() {
+        assertEquals(9, ViewMode.entries.size)
     }
 
     @Test
     fun `fromKey day returns DAY`() {
         assertEquals(ViewMode.DAY, ViewMode.fromKey("day"))
+    }
+
+    @Test
+    fun `fromKey timeline returns DAY_TIMELINE`() {
+        assertEquals(ViewMode.DAY_TIMELINE, ViewMode.fromKey("timeline"))
+    }
+
+    @Test
+    fun `DAY_TIMELINE key is timeline`() {
+        assertEquals("timeline", ViewMode.DAY_TIMELINE.key)
+    }
+
+    @Test
+    fun `DAY_TIMELINE visibleDays is 1`() {
+        assertEquals(1, ViewMode.DAY_TIMELINE.visibleDays)
+    }
+
+    @Test
+    fun `DAY_TIMELINE pagerNextStep is 1`() {
+        assertEquals(1, ViewMode.DAY_TIMELINE.pagerNextStep)
+    }
+
+    @Test
+    fun `DAY_TIMELINE isTimeGrid is true`() {
+        assertEquals(true, ViewMode.DAY_TIMELINE.isTimeGrid)
     }
 
     @Test

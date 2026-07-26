@@ -135,6 +135,8 @@ fun SettingsRoute(
         val appLockEnabled by viewModel.appLockEnabled.collectAsStateWithLifecycle()
         val timeFormat by viewModel.timeFormat.collectAsStateWithLifecycle()
         val firstDayOfWeek by viewModel.firstDayOfWeek.collectAsStateWithLifecycle()
+        val homeTimezone by viewModel.homeTimezone.collectAsStateWithLifecycle()
+        val timelineUseHomeTz by viewModel.timelineUseHomeTz.collectAsStateWithLifecycle()
         val showWeekNumbers by viewModel.showWeekNumbers.collectAsStateWithLifecycle()
         val widgetMaxEventsPerDay by viewModel.widgetMaxEventsPerDay.collectAsStateWithLifecycle()
         val syncLookbackDays by viewModel.syncLookbackDays.collectAsStateWithLifecycle()
@@ -649,6 +651,10 @@ fun SettingsRoute(
                             onTimeFormatChange = viewModel::setTimeFormat,
                             firstDayOfWeek = firstDayOfWeek,
                             onFirstDayOfWeekChange = viewModel::setFirstDayOfWeek,
+                            homeTimezone = homeTimezone,
+                            onHomeTimezoneChange = viewModel::setHomeTimezone,
+                            timelineUseHomeTz = timelineUseHomeTz,
+                            onTimelineUseHomeTzChange = viewModel::setTimelineUseHomeTz,
                             showWeekNumbers = showWeekNumbers,
                             onShowWeekNumbersChange = viewModel::setShowWeekNumbers,
                             widgetMaxEventsPerDay = widgetMaxEventsPerDay,

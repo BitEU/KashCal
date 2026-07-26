@@ -40,6 +40,8 @@ object ExportablePreferences {
         PreferencesKeys.TITLE_SUGGESTIONS_ENABLED.name to PrefKind.BOOL,
         PreferencesKeys.SHOW_EVENT_EMOJIS.name to PrefKind.BOOL,
         PreferencesKeys.TIME_FORMAT.name to PrefKind.STRING,
+        PreferencesKeys.HOME_TIMEZONE.name to PrefKind.STRING,
+        PreferencesKeys.TIMELINE_USE_HOME_TZ.name to PrefKind.BOOL,
         PreferencesKeys.DEFAULT_CALENDAR_VIEW.name to PrefKind.STRING,
         PreferencesKeys.WIDGET_MAX_EVENTS_PER_DAY.name to PrefKind.INT,
         PreferencesKeys.CONTACT_BIRTHDAYS_ENABLED.name to PrefKind.BOOL,
@@ -85,6 +87,10 @@ object ExportablePreferences {
         // Display
         PreferencesKeys.SHOW_EVENT_EMOJIS,
         PreferencesKeys.TIME_FORMAT,
+        // Timeline home-timezone preferences — deliberate user choices (an IANA
+        // zone ID and a layout toggle), portable across installs
+        PreferencesKeys.HOME_TIMEZONE,
+        PreferencesKeys.TIMELINE_USE_HOME_TZ,
         PreferencesKeys.DEFAULT_CALENDAR_VIEW,
         PreferencesKeys.WIDGET_MAX_EVENTS_PER_DAY,
         // Contact birthdays & anniversaries
@@ -103,8 +109,8 @@ object ExportablePreferences {
         // Profile — user's avatar initials travel with a settings backup
         PreferencesKeys.USER_INITIALS,
     ).also {
-        require(it.size == 35) {
-            "KEYS size drifted; expected 35 allowed keys but got ${it.size}. Update ExportablePreferencesTest expectations too."
+        require(it.size == 37) {
+            "KEYS size drifted; expected 37 allowed keys but got ${it.size}. Update ExportablePreferencesTest expectations too."
         }
     }
 

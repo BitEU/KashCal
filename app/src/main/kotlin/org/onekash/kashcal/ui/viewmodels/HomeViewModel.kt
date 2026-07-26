@@ -73,6 +73,7 @@ import org.onekash.kashcal.ui.components.attendees.AttendeeStatus
 import org.onekash.kashcal.ui.components.attendees.AttendeeUiModel
 import org.onekash.kashcal.ui.components.generateSnackbarMessage
 import org.onekash.kashcal.ui.components.hub.normalizeInitials
+import org.onekash.kashcal.ui.components.timeline.TimelineUtils
 import org.onekash.kashcal.ui.components.weekview.WeekViewUtils
 import org.onekash.kashcal.ui.model.CalendarGroup
 import org.onekash.kashcal.ui.model.localizedDisplayName
@@ -765,6 +766,7 @@ class HomeViewModel(
                     setAgendaRange(EpochRange(now, now + AGENDA_WINDOW_MS))
                 }
                 ViewMode.DAY -> {} // goToToday() below handles week initialization
+                ViewMode.DAY_TIMELINE -> {} // goToToday() below handles week initialization
                 ViewMode.THREE_DAYS -> {} // goToToday() below handles week initialization
                 ViewMode.WEEK -> {} // goToToday() below handles week initialization
                 ViewMode.MONTH -> {} // goToToday() below handles dot loading + day selection
@@ -1004,6 +1006,16 @@ class HomeViewModel(
         viewModelScope.launch {
             dataStore.agendaWeekBarExpanded.collect { expanded ->
                 _uiState.update { it.copy(agendaWeekBarExpanded = expanded) }
+            }
+        }
+        viewModelScope.launch {
+            dataStore.homeTimezone.collect { zoneId ->
+                _uiState.update { it.copy(homeTimezone = zoneId) }
+            }
+        }
+        viewModelScope.launch {
+            dataStore.timelineUseHomeTz.collect { useHomeTz ->
+                _uiState.update { it.copy(timelineUseHomeTz = useHomeTz) }
             }
         }
         viewModelScope.launch {
@@ -1599,7 +1611,7 @@ class HomeViewModel(
      */
     fun goToToday(animate: Boolean = true) {
         when (_uiState.value.viewMode) {
-            ViewMode.DAY, ViewMode.THREE_DAYS, ViewMode.WEEK -> {
+            ViewMode.DAY, ViewMode.DAY_TIMELINE, ViewMode.THREE_DAYS, ViewMode.WEEK -> {
                 goToTodayWeek()
             }
             ViewMode.AGENDA -> {
@@ -1913,9 +1925,11 @@ class HomeViewModel(
      */
     fun navigateDayPagerToDate(dateMs: Long): Int {
         val date = WeekViewUtils.epochMsToDate(dateMs)
-        val targetPage = if (_uiState.value.viewMode == ViewMode.WEEK)
-            WeekViewUtils.dateToWeekPage(date, _uiState.value.firstDayOfWeek)
-        else WeekViewUtils.dateToPage(date)
+        val targetPage = when (_uiState.value.viewMode) {
+            ViewMode.WEEK -> WeekViewUtils.dateToWeekPage(date, _uiState.value.firstDayOfWeek)
+            ViewMode.DAY_TIMELINE -> TimelineUtils.dateToPage(date, timelineGridZone())
+            else -> WeekViewUtils.dateToPage(date)
+        }
 
         // Clear cached range to force reload
         currentLoadedRange = null
@@ -1994,11 +2008,16 @@ class HomeViewModel(
     fun onWeekViewDateSelected(dateMs: Long) {
         hideWeekViewDatePicker()
 
-        // Convert date to page in infinite pager (mode-aware)
+        // Convert date to page in infinite pager (mode-aware). The Timeline's
+        // page↔date mapping is anchored to "today in the grid timezone" (which
+        // may differ from the device's today around midnight), so it needs the
+        // zone-aware conversion.
         val date = WeekViewUtils.epochMsToDate(dateMs)
-        val targetPage = if (_uiState.value.viewMode == ViewMode.WEEK)
-            WeekViewUtils.dateToWeekPage(date, _uiState.value.firstDayOfWeek)
-        else WeekViewUtils.dateToPage(date)
+        val targetPage = when (_uiState.value.viewMode) {
+            ViewMode.WEEK -> WeekViewUtils.dateToWeekPage(date, _uiState.value.firstDayOfWeek)
+            ViewMode.DAY_TIMELINE -> TimelineUtils.dateToPage(date, timelineGridZone())
+            else -> WeekViewUtils.dateToPage(date)
+        }
 
         // Clear cached range to force reload
         currentLoadedRange = null
@@ -2016,6 +2035,16 @@ class HomeViewModel(
     fun clearPendingWeekViewPagerPosition() {
         _uiState.update { it.copy(pendingWeekViewPagerPosition = null) }
     }
+
+    /**
+     * The timezone the Timeline view lays out its grid in, resolved from the
+     * home-timezone preferences already mirrored into [HomeUiState]. Falls back
+     * to the device zone when home isn't set / the toggle is off.
+     */
+    private fun timelineGridZone(): ZoneId = TimelineUtils.resolveGridZone(
+        useHomeTz = _uiState.value.timelineUseHomeTz,
+        homeTimezone = _uiState.value.homeTimezone
+    )
 
     // ==================== Day Selection ====================
 
@@ -2546,7 +2575,7 @@ class HomeViewModel(
                 val now = System.currentTimeMillis()
                 setAgendaRange(EpochRange(now, now + AGENDA_WINDOW_MS))
             }
-            ViewMode.DAY, ViewMode.THREE_DAYS, ViewMode.WEEK -> {
+            ViewMode.DAY, ViewMode.DAY_TIMELINE, ViewMode.THREE_DAYS, ViewMode.WEEK -> {
                 if (currentLoadedRange == null) {
                     goToTodayWeek()
                 }

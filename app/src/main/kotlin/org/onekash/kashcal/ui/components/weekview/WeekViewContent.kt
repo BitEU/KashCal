@@ -78,14 +78,12 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import org.onekash.kashcal.R
-import org.onekash.kashcal.data.db.entity.Occurrence
 import org.onekash.kashcal.domain.EmojiMatcher
 import org.onekash.kashcal.domain.model.DisplayEvent
 import org.onekash.kashcal.ui.components.declinedCardAlpha
 import org.onekash.kashcal.ui.components.eventStateDescription
 import org.onekash.kashcal.ui.components.declinedTitleDecoration
 import org.onekash.kashcal.ui.shared.contrastForegroundOn
-import org.onekash.kashcal.ui.util.DayPagerUtils
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -195,11 +193,11 @@ fun WeekViewContent(
 
     // Group events by date (LocalDate key)
     val timedEventsByDate = remember(timedEvents) {
-        groupEventsByDate(timedEvents.toList())
+        WeekViewUtils.groupEventsByDate(timedEvents.toList())
     }
 
     val allDayEventsByDate = remember(allDayEvents) {
-        groupEventsByDate(allDayEvents.toList())
+        WeekViewUtils.groupEventsByDate(allDayEvents.toList())
     }
 
     // All timed events go directly to the grid (full 24h range, no overflow separation)
@@ -429,6 +427,9 @@ private fun UnifiedTimeGrid(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
+                        // Pinch-to-zoom on the hour height. TimelineDayContent carries a
+                        // near-verbatim copy of this gesture block (extraction would rewire
+                        // this live gesture path for little gain) — keep fixes in sync.
                         .pointerInput(Unit) {
                             val pass = PointerEventPass.Initial
                             awaitEachGesture {
@@ -1000,10 +1001,11 @@ private fun CompactEventChip(
 }
 
 /**
- * Time label for the time grid.
+ * Time label for the time grid. Internal so the Timeline view's time gutter
+ * renders identically without a copy.
  */
 @Composable
-private fun TimeLabel(
+internal fun TimeLabel(
     hour: Int,
     height: Dp,
     is24Hour: Boolean = false,
@@ -1025,10 +1027,11 @@ private fun TimeLabel(
 }
 
 /**
- * Grid lines for the time grid.
+ * Grid lines for the time grid. Internal so the Timeline view draws the same
+ * hour rules without a copy.
  */
 @Composable
-private fun GridLines(
+internal fun GridLines(
     hourHeight: Dp,
     totalHours: Int,
     modifier: Modifier = Modifier
@@ -1125,32 +1128,6 @@ private fun CurrentTimeIndicator(
 }
 
 // ==================== Helper Functions ====================
-
-/**
- * Group events by LocalDate.
- *
- * Uses pre-calculated startDay/endDay from DisplayEvent which are already
- * UTC-aware for all-day events.
- * Expands multi-day events to appear on all days they span.
- */
-private fun groupEventsByDate(
-    events: List<DisplayEvent>
-): Map<LocalDate, List<DisplayEvent>> {
-    val result = mutableMapOf<LocalDate, MutableList<DisplayEvent>>()
-
-    for (displayEvent in events) {
-        // Expand multi-day events to all days they span
-        var currentDay = displayEvent.startDay
-        while (currentDay <= displayEvent.endDay) {
-            val date = DayPagerUtils.dayCodeToLocalDate(currentDay)
-            result.getOrPut(date) { mutableListOf() }.add(displayEvent)
-            currentDay = Occurrence.incrementDayCode(currentDay)
-        }
-    }
-
-    return result
-}
-
 
 /**
  * Preview/placeholder version of week view for empty state.

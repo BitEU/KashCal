@@ -254,6 +254,13 @@
     <string name="settings_export_subtitle">Save events to an ICS file</string>
     <string name="settings_birthday_reminder">Birthday Reminder</string>
     <string name="settings_use_device_timezone">Use device timezone</string>
+    <!-- Home time zone picker row (Appearance section) -->
+    <string name="settings_home_timezone">Home time zone</string>
+    <!-- Row value when no home time zone has been set -->
+    <string name="settings_home_timezone_device">Device time zone</string>
+    <!-- Toggle: lay out the Timeline view's day grid in the home time zone -->
+    <string name="settings_timeline_home_tz">Timeline in home time</string>
+    <string name="settings_timeline_home_tz_info">Keeps the Timeline day grid on your home time zone while traveling. Events in other time zones also show their local time.</string>
     <!-- Section headers in Settings screen -->
     <string name="settings_section_calendars">Calendars &amp; accounts</string>
     <string name="settings_section_appearance">Appearance</string>
@@ -1215,9 +1222,16 @@
     <string name="view_agenda">Agenda</string>
     <string name="view_month_full">Month (Full)</string>
     <string name="view_day">Day</string>
+    <string name="view_timeline">Timeline</string>
     <string name="view_three_days">3 Days</string>
     <string name="view_year">Year</string>
     <string name="view_insights">Insights</string>
+
+    <!-- Timeline view -->
+    <!-- Pill next to the Timeline day header when the grid is laid out in the home time zone; %1$s = zone abbreviation (e.g. EDT) -->
+    <string name="timeline_home_zone_pill">Home · %1$s</string>
+    <!-- Spoken description of the home-zone pill; %1$s = zone abbreviation -->
+    <string name="cd_timeline_grid_zone">Day grid shown in home time zone %1$s</string>
 
     <!-- YearOverlay -->
     <string name="label_go_to_month">Go to month</string>

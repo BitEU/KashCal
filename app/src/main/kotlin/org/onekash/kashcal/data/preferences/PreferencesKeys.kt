@@ -116,7 +116,22 @@ object PreferencesKeys {
     /** Time format preference: "system", "12h", or "24h" */
     val TIME_FORMAT = stringPreferencesKey("time_format")
 
-    /** Default calendar view: "month", "agenda", or "three_days" */
+    /**
+     * The user's home timezone as an IANA zone ID (e.g., "America/New_York").
+     * Empty string means "not set" — follow the device timezone. Used by the
+     * Timeline view to lay out the day grid in home time while traveling
+     * (and to decide when an event needs a dual-timezone annotation).
+     */
+    val HOME_TIMEZONE = stringPreferencesKey("home_timezone")
+
+    /**
+     * Whether the Timeline view lays out its hour grid in the home timezone
+     * (true, default — iOS-travel-mode style) or the device's current timezone
+     * (false). Only meaningful when HOME_TIMEZONE is set.
+     */
+    val TIMELINE_USE_HOME_TZ = booleanPreferencesKey("timeline_use_home_tz")
+
+    /** Default calendar view: a persisted ViewMode key ("month", "agenda", "day", "timeline", "three_days", "week", "month_full", "year") */
     val DEFAULT_CALENDAR_VIEW = stringPreferencesKey("default_calendar_view")
 
     /** Maximum events shown per day in widgets (agenda + week) */
